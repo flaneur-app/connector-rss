@@ -23,6 +23,7 @@
 pub mod enclosure;
 pub mod html5;
 pub mod jsonld;
+pub mod koreus;
 pub mod meta;
 pub mod microdata;
 pub mod oembed;
@@ -322,7 +323,9 @@ impl std::fmt::Debug for ResolverChain {
 impl Default for ResolverChain {
     /// The generic resolvers and the built-in site resolvers.
     fn default() -> Self {
-        Self::generic()
+        let mut chain = Self::generic();
+        chain.push_site(Arc::new(koreus::Koreus));
+        chain
     }
 }
 
