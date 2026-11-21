@@ -58,7 +58,16 @@ async fn site() -> MockServer {
         fixture("rss.xml", &base),
     )
     .await;
-    for page in ["jsonld", "og", "oembed", "youtube-embed"] {
+    for page in [
+        "jsonld",
+        "og",
+        "oembed",
+        "youtube-embed",
+        "embed-dailymotion",
+        "embed-dailymotion-script",
+        "embed-dailymotion-link",
+        "embed-odysee",
+    ] {
         let body = fixture(&format!("{page}.html"), &base);
         mount_text(
             &server,
@@ -322,6 +331,55 @@ async fn hands_off_a_youtube_embed() {
         Some(ItemRef::new(ServiceId::new("youtube"), "dQw4w9WgXcQ"))
     );
     assert_eq!(playable.item.title, "Embedded clip");
+}
+
+#[tokio::test]
+async fn hands_off_known_video_hosts() {
+    let server = site().await;
+    let rss = connector();
+    let cases = [
+        ("embed-dailymotion", "dailymotion", "x8abc12"),
+        ("embed-dailymotion-script", "dailymotion", "xby943q"),
+        ("embed-dailymotion-link", "dailymotion", "x7tgad0"),
+        ("embed-odysee", "odysee", "@Odysee#8/channel-roundup#e"),
+    ];
+    for (page, service, id) in cases {
+        let url = Url::parse(&format!("{}/videos/{page}.html", server.uri())).unwrap();
+        let item = flaneur_connector_rss::id::ItemId::new(None, None, Some(url), None).unwrap();
+        let playable = rss
+            .player()
+            .resolve(&ItemRef::new(service_id(), item.encode()))
+            .await
+            .unwrap();
+        assert_eq!(playable.streams.len(), 0, "{page}");
+        assert_eq!(
+            playable.handoff,
+            Some(ItemRef::new(ServiceId::new(service), id)),
+            "{page}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn own_file_wins_over_an_embed() {
+    let server = MockServer::start().await;
+    let base = server.uri();
+    let html = format!(
+        r#"<html><head><meta property="og:video" content="{base}/media/own.mp4">
+        <meta property="og:video:type" content="video/mp4"></head>
+        <body><iframe src="https://www.dailymotion.com/embed/video/x8abc12"></iframe></body></html>"#
+    );
+    mount_text(&server, "/videos/both.html", "text/html", html).await;
+    mount_video(&server, "/media/own.mp4", "video/mp4", 1_000).await;
+    let page = Url::parse(&format!("{base}/videos/both.html")).unwrap();
+    let item = flaneur_connector_rss::id::ItemId::new(None, None, Some(page), None).unwrap();
+    let playable = connector()
+        .player()
+        .resolve(&ItemRef::new(service_id(), item.encode()))
+        .await
+        .unwrap();
+    assert_eq!(playable.streams.len(), 1);
+    assert_eq!(playable.handoff, None);
 }
 
 #[tokio::test]

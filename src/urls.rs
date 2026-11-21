@@ -4,7 +4,7 @@
 //!
 //! `parse_url` cannot make a request, so only URL shapes count: a page of an unknown site is
 //! not claimed (it may belong to another connector, or have no video), and its feeds are found
-//! with [`RssConnector::discover_feeds`](crate::RssConnector::discover_feeds) instead.
+//! with [`Connector::discover`](flaneur_connector::Connector::discover) instead.
 
 use url::Url;
 
