@@ -36,7 +36,7 @@ pub mod media;
 pub mod resolver;
 pub mod urls;
 
-pub use connector::{DiscoveredFeed, RssConnector, RssConnectorBuilder};
+pub use connector::{RssConnector, RssConnectorBuilder};
 
 use flaneur_model::ServiceId;
 

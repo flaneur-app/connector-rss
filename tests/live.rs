@@ -6,14 +6,13 @@
 use flaneur_connector::{ChannelTab, Connector, Target};
 use flaneur_connector_rss::RssConnector;
 use flaneur_model::VideoCodec;
-use url::Url;
 
 #[tokio::test]
 #[ignore = "needs the network; hits feeds.feedburner.com and www.koreus.com"]
 async fn koreus_feed_resolves_to_verified_streams() {
     let rss = RssConnector::new().unwrap();
-    let url = Url::parse("https://feeds.feedburner.com/Koreus-videos").unwrap();
-    let Some(Target::Channel(feed)) = rss.parse_url(&url) else {
+    let Some(Target::Channel(feed)) = rss.parse_url("https://feeds.feedburner.com/Koreus-videos")
+    else {
         panic!("the Koreus feed is a channel");
     };
     let channels = rss.channels().unwrap();
@@ -61,7 +60,10 @@ async fn koreus_feed_resolves_to_verified_streams() {
 
     // A shared link to the same page resolves to the same item.
     let page = first.web_url.as_ref().unwrap();
-    assert_eq!(rss.parse_url(page), Some(Target::Item(first.r#ref.clone())));
+    assert_eq!(
+        rss.parse_url(page.as_str()),
+        Some(Target::Item(first.r#ref.clone()))
+    );
 
     let related = rss.player().related(&first.r#ref, None).await.unwrap();
     assert_eq!(related.items.len(), items.items.len() - 1);

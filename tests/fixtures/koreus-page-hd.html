@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Trimmed copy of https://www.koreus.com/video/spectateur-chute-cycliste-sprint.html (2026-11-21) for tests: head tags, player script, VideoObject block. -->
+<!-- Trimmed copy of https://www.koreus.com/video/spectateur-chute-cycliste-sprint.html (2026-11-21) for tests: head tags, player scripts, VideoObject block. -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -63,6 +63,10 @@ function playerkoreus() {
 	var koreusPlayer='<video-js autoplay id="my-video" class="video-js vjs-big-play-centered" controls preload="none" width="640" height="360"><source src="https://embed.koreus.com/00071/201503/spectateur-chute-cycliste-sprint-hd.mp4" type="video/mp4; codecs=avc1.640028, mp4a.40.2" label="avc1 HD"><source src="https://embed.koreus.com/00071/201503/spectateur-chute-cycliste-sprint.mp4" type="video/mp4; codecs=avc1.42E01E, mp4a.40.2" label="avc1"><p class="vjs-no-js">Vous devez activer le JavaScript pour voir cette vidéo.</p></video-js>'
 if (!fromEU) {  koreusPlayer = koreusPlayer.replaceAll('https://embed.koreus.com', 'https://koreus-media.b-cdn.net'); }
 document.getElementById("video").innerHTML=koreusPlayer;
+}
+function playerori() {
+	console.log("playerori");
+		document.getElementById("video").innerHTML='<div id="videoDiv"><iframe width="640" height="360" src="//www.youtube.com/embed/hH7HeBpPbQA?rel=0&amp;autohide=1&amp;showinfo=0&amp;autoplay=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>></iframe></div>';
 }
 </script>
 </head>

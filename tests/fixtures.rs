@@ -5,6 +5,7 @@
 
 use flaneur_connector_rss::feed;
 use flaneur_connector_rss::http::{Http, HttpConfig};
+use flaneur_connector_rss::resolver::embed::EmbeddedPlayer;
 use flaneur_connector_rss::resolver::koreus::{self, Koreus};
 use flaneur_connector_rss::resolver::meta::MetaTags;
 use flaneur_connector_rss::resolver::microdata::Microdata;
@@ -106,6 +107,8 @@ fn koreus_feed_maps_to_items() {
         (Some(720), Some(1280))
     );
     assert!(first.media[0].is_video());
+    // Koreus's many vertical videos are recognizable from the feed alone.
+    assert!(item.dimensions.unwrap().is_portrait());
 
     // The guid is the link, so the id holds the feed and the link only.
     assert_eq!(
@@ -179,6 +182,11 @@ async fn koreus_resolver_ranks_hd_first() {
     // The SD file is smaller, by an amount the page does not say.
     let sd = &found.candidates[1];
     assert_eq!((sd.width, sd.height), (None, None));
+    assert_eq!(sd.label.as_deref(), Some("avc1"));
+    // The page also embeds the same video from YouTube; it is kept as a handoff, which the
+    // chain uses only when none of the page's own files plays.
+    let embedded = run(&EmbeddedPlayer, &page).await;
+    assert_eq!(embedded.handoff.unwrap().to_string(), "youtube:hH7HeBpPbQA");
 }
 
 #[tokio::test]

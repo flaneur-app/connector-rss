@@ -4,8 +4,8 @@
 
 use flaneur_connector::{Error, Result};
 use flaneur_model::{
-    Channel, ChannelRef, ChannelSummary, ContentFlags, Item, ItemKind, ItemRef, Precision,
-    Published, ReactionCounts, Seconds, Thumbnail,
+    Channel, ChannelRef, ChannelSummary, ContentFlags, Dimensions, Item, ItemKind, ItemRef,
+    Precision, Published, ReactionCounts, Seconds, Thumbnail,
 };
 use url::Url;
 
@@ -169,6 +169,12 @@ fn map_entry(
         })
         .filter(|d| !d.is_empty());
 
+    let dimensions = feed_media.iter().filter(|m| m.is_video()).find_map(|m| {
+        Some(Dimensions {
+            width: m.width.filter(|w| *w > 0)?,
+            height: m.height.filter(|h| *h > 0)?,
+        })
+    });
     let video_url = feed_media
         .iter()
         .find(|m| m.is_video())
@@ -196,6 +202,7 @@ fn map_entry(
         scheduled_start: None,
         channel: Some(channel.clone()),
         thumbnails,
+        dimensions,
         views: entry
             .media
             .iter()

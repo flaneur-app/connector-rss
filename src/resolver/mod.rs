@@ -14,12 +14,15 @@
 //! 3. [`microdata`]: schema.org `VideoObject` microdata;
 //! 4. [`meta`]: Open Graph `og:video`, Twitter `twitter:player:stream`, `<meta name="rating">`;
 //! 5. [`html5`]: `<video>` / `<source>`;
-//! 6. [`oembed`]: the page's oEmbed document, only when nothing before found a candidate.
+//! 6. [`embed`]: a YouTube player embedded in the page, kept as a handoff to the YouTube
+//!    connector for pages that have no file of their own;
+//! 7. [`oembed`]: the page's oEmbed document, only when nothing before found a candidate.
 //!
 //! Results are merged field by field, earlier resolvers first. Every candidate URL is then
 //! **verified** with a ranged `GET` (`Range: bytes=0-0`) and kept only if it serves video, HLS
 //! or DASH; nothing a page claims is trusted before that.
 
+pub mod embed;
 pub mod enclosure;
 pub mod html5;
 pub mod jsonld;
@@ -33,7 +36,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use flaneur_connector::{Error, Result};
-use flaneur_model::{Item, Published, Seconds, Stream, StreamKind, Thumbnail};
+use flaneur_model::{Item, ItemRef, Published, Seconds, Stream, StreamKind, Thumbnail};
 use futures_util::{StreamExt, stream};
 use scraper::Html;
 use url::Url;
@@ -196,6 +199,9 @@ pub struct Resolution {
     /// Sensitive-content marker: `Some(true)` for adult or mature content, `Some(false)` when
     /// the page says it is for a general audience, `None` when it says nothing.
     pub sensitive: Option<bool>,
+    /// The item as hosted on another service, for a page that embeds that service's player
+    /// (see `Playable::handoff`). Used only when no candidate plays.
+    pub handoff: Option<ItemRef>,
 }
 
 impl Resolution {
@@ -212,6 +218,7 @@ impl Resolution {
         self.published = self.published.or(other.published);
         media::merge_thumbnails(&mut self.thumbnails, other.thumbnails);
         self.sensitive = media::combine_sensitive([self.sensitive, other.sensitive]);
+        self.handoff = self.handoff.take().or(other.handoff);
     }
 
     /// Adds a candidate, merging it with an earlier one of the same URL.
@@ -341,6 +348,7 @@ impl ResolverChain {
                 Arc::new(microdata::Microdata),
                 Arc::new(meta::MetaTags),
                 Arc::new(html5::Html5Video),
+                Arc::new(embed::EmbeddedPlayer),
                 Arc::new(oembed::OEmbed),
             ],
         }
@@ -508,6 +516,7 @@ fn to_stream(url: Url, candidate: &Candidate, probe: &Probe, duration: Option<Se
         video_codec: media::video_codec(&codecs),
         hdr: None,
         audio: media::audio_track(&codecs),
+        label: candidate.label.clone(),
     }
 }
 
