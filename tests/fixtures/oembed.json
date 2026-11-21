@@ -1,0 +1,1 @@
+{"version": "1.0", "type": "video", "title": "oEmbed clip", "thumbnail_url": "{{BASE}}/thumbs/oembed.jpg", "thumbnail_width": 640, "thumbnail_height": 360, "html": "<video src=\"{{BASE}}/media/oembed.mp4\"></video>"}
