@@ -10,8 +10,8 @@
 //! searched for the feeds it advertises.
 
 use flaneur_connector::{ChannelTab, Connector, Target};
-use flaneur_connector_rss::{RssConnector, service_id};
-use flaneur_model::{ChannelRef, Item};
+use flaneur_connector_rss::RssConnector;
+use flaneur_model::Item;
 use url::Url;
 
 #[tokio::main]
@@ -19,16 +19,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arg = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "https://feeds.feedburner.com/Koreus-videos".to_owned());
-    let url = Url::parse(&arg)?;
     let rss = RssConnector::new()?;
 
-    let feed = if let Some(Target::Channel(feed)) = rss.parse_url(&url) {
+    let feed = if let Some(Target::Channel(feed)) = rss.parse_url(&arg) {
         feed
     } else {
-        let found = rss.discover_feeds(&url).await?;
-        let first = found.first().ok_or("no feed found at this URL")?;
-        println!("Using the feed advertised by the page: {}", first.url);
-        ChannelRef::new(service_id(), first.url.as_str())
+        let found = rss.discover(&arg).await?;
+        let Some(Target::Channel(first)) = found.into_iter().next() else {
+            return Err("no feed found at this URL".into());
+        };
+        println!("Using the feed advertised by the page: {}", first.id);
+        first
     };
 
     let channels = rss.channels().expect("the RSS connector has channels");
@@ -53,6 +54,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let item = &playable.item;
     println!("duration:  {:?} s", item.duration);
     println!("sensitive: {:?}", item.flags.sensitive);
+    println!(
+        "frame:     {}",
+        item.dimensions.map_or_else(
+            || "unknown".to_owned(),
+            |d| format!(
+                "{}x{}{}",
+                d.width,
+                d.height,
+                if d.is_portrait() { " (portrait)" } else { "" }
+            )
+        )
+    );
+    if let Some(other) = &playable.handoff {
+        println!("handoff:   {other}");
+    }
     for thumb in &item.thumbnails {
         println!(
             "thumbnail: {} {}",
@@ -62,8 +78,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     for stream in &playable.streams {
         println!(
-            "stream:    {} {:?} {:?} {} size={:?} bitrate={:?} audio={:?}",
+            "stream:    {} [{}] {:?} {:?} {} size={:?} bitrate={:?} audio={:?}",
             stream.url,
+            stream.label.as_deref().unwrap_or("-"),
             stream.container,
             stream.video_codec,
             size(stream.width, stream.height),

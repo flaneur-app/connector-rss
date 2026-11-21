@@ -13,7 +13,7 @@ use flaneur_model::Thumbnail;
 use scraper::Html;
 use serde_json::Value;
 
-use super::{PageDocument, Resolution, ResolveRequest, Resolver, html5};
+use super::{PageDocument, Resolution, ResolveRequest, Resolver, embed, html5};
 use crate::http::DocumentKind;
 use crate::media;
 
@@ -64,7 +64,11 @@ fn read(value: &Value, page: &PageDocument) -> Resolution {
         })
     };
     let mut resolution = match text("html") {
-        Some(html) => html5::read(&Html::parse_fragment(&html), page),
+        Some(html) => {
+            let mut found = html5::read(&Html::parse_fragment(&html), page);
+            found.handoff = embed::handoff(&html);
+            found
+        }
         None => Resolution::default(),
     };
     resolution.title = text("title").filter(|t| !t.is_empty());

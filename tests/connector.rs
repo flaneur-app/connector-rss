@@ -7,7 +7,7 @@ use std::time::Duration;
 use flaneur_connector::{ChannelTab, Connector, Error, Support, Target};
 use flaneur_connector_rss::http::{HttpConfig, USER_AGENT};
 use flaneur_connector_rss::{RssConnector, service_id};
-use flaneur_model::{ChannelRef, Container, ItemRef, VideoCodec};
+use flaneur_model::{ChannelRef, Container, ItemRef, ServiceId, VideoCodec};
 use url::Url;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
@@ -58,7 +58,7 @@ async fn site() -> MockServer {
         fixture("rss.xml", &base),
     )
     .await;
-    for page in ["jsonld", "og", "oembed"] {
+    for page in ["jsonld", "og", "oembed", "youtube-embed"] {
         let body = fixture(&format!("{page}.html"), &base);
         mount_text(
             &server,
@@ -131,6 +131,9 @@ async fn declares_local_subscriptions_and_no_accounts() {
     assert_eq!(caps.subscriptions_write, Support::Local);
     assert_eq!(caps.history_read, Support::Local);
     assert_eq!(caps.history_write, Support::Local);
+    assert_eq!(caps.subscription_feed, Support::Local);
+    assert_eq!(caps.public_playlists, Support::Unsupported);
+    assert_eq!(caps.comment_replies_write, Support::Unsupported);
     assert_eq!(caps.search, Support::Unsupported);
     assert_eq!(caps.home, Support::Unsupported);
     assert_eq!(caps.reactions_write, Support::Unsupported);
@@ -170,6 +173,10 @@ async fn lists_feed_items_newest_first() {
     );
     let middle = &page.items[1];
     assert_eq!(middle.duration, Some(61));
+    let frame = middle.dimensions.unwrap();
+    assert_eq!((frame.width, frame.height), (1280, 720));
+    assert!(!frame.is_portrait());
+    assert_eq!(page.items[0].dimensions, None);
     assert_eq!(middle.flags.sensitive, Some(true)); // media:rating adult
     assert_eq!(middle.channel.as_ref().unwrap().name, "Example & Videos");
     let older = &page.items[2];
@@ -248,6 +255,9 @@ async fn verifies_every_candidate() {
     assert_eq!(webm.container, Container::WebM);
     assert_eq!(webm.video_codec, Some(VideoCodec::Vp9));
     assert_eq!(webm.audio.as_ref().unwrap().codec.as_deref(), Some("opus"));
+    assert_eq!(webm.label.as_deref(), Some("WebM"));
+    assert_eq!(playable.streams[0].label, None);
+    assert!(playable.headers.is_empty() && playable.handoff.is_none());
     assert_eq!(
         (playable.streams[0].width, playable.streams[0].height),
         (Some(1280), Some(720))
@@ -293,6 +303,25 @@ async fn falls_back_to_oembed() {
     assert_eq!(playable.item.title, "oEmbed clip");
     assert_eq!(playable.item.thumbnails[0].width, Some(640));
     assert!(playable.item.channel.is_none());
+}
+
+#[tokio::test]
+async fn hands_off_a_youtube_embed() {
+    let server = site().await;
+    let rss = connector();
+    let page = Url::parse(&format!("{}/videos/youtube-embed.html", server.uri())).unwrap();
+    let id = flaneur_connector_rss::id::ItemId::new(None, None, Some(page), None).unwrap();
+    let playable = rss
+        .player()
+        .resolve(&ItemRef::new(service_id(), id.encode()))
+        .await
+        .unwrap();
+    assert_eq!(playable.streams.len(), 0);
+    assert_eq!(
+        playable.handoff,
+        Some(ItemRef::new(ServiceId::new("youtube"), "dQw4w9WgXcQ"))
+    );
+    assert_eq!(playable.item.title, "Embedded clip");
 }
 
 #[tokio::test]
@@ -377,7 +406,7 @@ async fn revalidates_with_etag() {
 #[tokio::test]
 async fn recognizes_urls() {
     let rss = connector();
-    let parse = |s: &str| rss.parse_url(&Url::parse(s).unwrap());
+    let parse = |s: &str| rss.parse_url(s);
 
     let Some(Target::Item(item)) = parse("http://koreus.com/media/illusion-tandem.html") else {
         panic!("a Koreus page is an item");
@@ -416,11 +445,26 @@ async fn discovers_feeds_of_a_page() {
         </head></html>"#;
     mount_text(&server, "/", "text/html", html.into()).await;
     let rss = connector();
-    let found = rss
-        .discover_feeds(&Url::parse(&server.uri()).unwrap())
-        .await
-        .unwrap();
-    assert_eq!(found.len(), 2);
-    assert_eq!(found[0].url.path(), "/videos.rss");
-    assert_eq!(found[0].title.as_deref(), Some("Videos"));
+    let found = rss.discover(&server.uri()).await.unwrap();
+    let base = server.uri();
+    assert_eq!(
+        found,
+        [
+            Target::Channel(ChannelRef::new(service_id(), format!("{base}/videos.rss"))),
+            Target::Channel(ChannelRef::new(service_id(), format!("{base}/atom.xml"))),
+        ]
+    );
+    // A feed URL is returned as is.
+    mount_text(
+        &server,
+        "/rss.xml",
+        "application/rss+xml",
+        fixture("rss.xml", &base),
+    )
+    .await;
+    let feed = format!("{base}/rss.xml");
+    assert_eq!(
+        rss.discover(&feed).await.unwrap(),
+        [Target::Channel(ChannelRef::new(service_id(), feed.clone()))]
+    );
 }

@@ -28,6 +28,7 @@ src/
     ├── schema.rs       # VideoObject mapping shared by the two above
     ├── meta.rs         # Open Graph, Twitter card, <meta name="rating">
     ├── html5.rs        # <video> / <source>
+    ├── embed.rs        # YouTube embeds, as Playable.handoff
     ├── oembed.rs       # oEmbed (fallback)
     └── koreus.rs       # site resolver: www.koreus.com
 tests/

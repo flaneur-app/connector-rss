@@ -14,9 +14,10 @@ The crate `flaneur-connector-rss` implements the `Connector` trait of
 | Operation | Support | How |
 | --- | --- | --- |
 | Channel pages | Anonymous | A feed is a channel: its id is the feed URL. The header comes from the feed (title, description, logo, site link); the `Videos` tab lists the feed's video items, newest first, in one page. |
-| Playback | Anonymous | `resolve` re-reads the feed, runs the resolver chain on the item's enclosures and page, and returns the verified streams (`StreamKind::Muxed`), HLS and DASH manifests. |
+| Playback | Anonymous | `resolve` re-reads the feed, runs the resolver chain on the item's enclosures and page, and returns the verified streams (`StreamKind::Muxed`, with the site's variant name as `label`), HLS and DASH manifests. A page that only embeds a YouTube player is handed off (`Playable.handoff`) to the YouTube connector. |
 | Related items | Anonymous | The other items of the same feed: older ones first, then newer ones. |
-| Following feeds | Local | Kept by the core's store; the subscription feed is the core merging the items of every followed feed by date. |
+| Following feeds | Local | Kept by the core's store. |
+| Subscription feed | Local | The core's merge, by date, of the `items()` of every followed feed. |
 | History | Local | Kept by the core's store. |
 | Search, home, trending, playlists, reactions, comments | Unsupported | |
 
@@ -28,7 +29,9 @@ with RSS `<enclosure>`, Media RSS (`media:content`, `media:group`, `media:thumbn
 left out; items without media but with a page are kept, for the resolvers.
 
 Items: kind `Video`, title, plain-text description, publication date (`Precision::Exact` from
-feeds, `Day` for date-only page dates), duration when the feed or page gives it, thumbnails
+feeds, `Day` for date-only page dates), duration when the feed or page gives it, frame
+`dimensions` from the feed's `media:content` width and height (or the resolved streams), so
+portrait videos can be told apart while staying `ItemKind::Video`, thumbnails
 (Media RSS, the description's first `<img>`, page images), and `flags.sensitive` from
 `media:rating`, `<meta name="rating">`, JSON-LD `isFamilyFriendly` / `contentRating` and
 `og:restrictions:age` (`adult`, `mature`... → `Some(true)`, `general` → `Some(false)`, nothing →
@@ -36,8 +39,9 @@ feeds, `Day` for date-only page dates), duration when the feed or page gives it,
 
 `parse_url` recognizes feed URLs by their shape (`.rss`, `.xml`, `/feed`, `feeds.*` hosts,
 `feed://`...) and the pages of sites with a site resolver. It cannot fetch anything, so pages of
-unknown sites are not claimed: `RssConnector::discover_feeds` lists the feeds a page advertises,
-for an "add a feed" dialog. Apps should ask this connector last, after the service connectors.
+unknown sites are not claimed: `Connector::discover` fetches the page and returns the feeds it
+advertises (or the URL itself when it is a feed), for an "add a feed" dialog. Apps should ask
+this connector last, after the service connectors.
 
 ### Item ids
 
@@ -45,6 +49,10 @@ for an "add a feed" dialog. Apps should ask this connector last, after the servi
 page or media URL when they differ, as a form-urlencoded string. It is stable as long as the feed
 URL and the item's guid do not change, and it is enough to resolve an item that has left the
 feed. See [`src/id.rs`](src/id.rs) for the exact format.
+
+Known limitation: the id holds the feed URL, so identity and location are coupled. When a feed
+moves (a new URL, `http` to `https`, a FeedBurner feed retired), its items get new ids, and the
+local history and resume positions of the old ids no longer match them.
 
 ### HTTP
 
@@ -69,7 +77,9 @@ upload date, thumbnails, sensitivity). The chain runs:
    4. `meta-tags`: `og:video` (an `og:video:type` that is not video, such as `text/html`, rules
       the URL out), `twitter:player:stream`, `og:image`, `video:duration`, `<meta name="rating">`;
    5. `html5-video`: `<video src>`, `<video>` / `<video-js>` `<source>` elements;
-   6. `oembed`: the page's JSON oEmbed document, only when nothing before found a candidate.
+   6. `embedded-player`: a YouTube embed (`youtube.com/embed/<id>`, also inside scripts), kept as
+      a handoff;
+   7. `oembed`: the page's JSON oEmbed document, only when nothing before found a candidate.
 
 The page is fetched once, and not at all when the link points at a media file. Results merge
 field by field, earlier resolvers first; candidates with the same URL merge into one. A site
@@ -81,6 +91,12 @@ Nothing a page claims is trusted: every candidate is **verified** with a `GET` a
 a video, HLS or DASH content type (`application/octet-stream` only for URLs with a video
 extension). The probe also gives the file size (`Content-Range`), and the bitrate follows from
 size and duration.
+
+When no candidate plays but the page embeds a YouTube player, `resolve` returns a `Playable`
+with no streams and `handoff: Some(youtube:<id>)`; the view-model resolves that item with the
+YouTube connector. When the page has its own file as well (older Koreus pages also embed the
+YouTube copy), the file wins. Other services (Odysee, PeerTube, Dailymotion) are not detected:
+their ids cannot be read from an embed URL without a request.
 
 ### Koreus
 
@@ -115,8 +131,8 @@ playing the MP4 file directly, as this connector does, skips the page and its ad
 3. Save a trimmed copy of a real page under `tests/fixtures/` and test the resolver against it;
    add an `#[ignore]` live test if the site is worth watching.
 
-Delegating to another connector (a page that only embeds a YouTube or PeerTube player) is not
-supported yet.
+A site resolver can also set `Resolution::handoff` when the site's pages embed another
+service's player.
 
 ## Example
 

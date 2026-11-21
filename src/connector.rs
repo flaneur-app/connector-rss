@@ -10,8 +10,8 @@ use flaneur_connector::{
     Session, Support, Target,
 };
 use flaneur_model::{
-    Channel, ChannelRef, ContentFlags, Cursor, Item, ItemKind, ItemRef, Page, Playable, Playlist,
-    ReactionCounts,
+    Channel, ChannelRef, ContentFlags, Cursor, Dimensions, Item, ItemKind, ItemRef, Page, Playable,
+    Playlist, ReactionCounts,
 };
 use url::Url;
 
@@ -21,15 +21,6 @@ use crate::id::ItemId;
 use crate::media;
 use crate::resolver::{self, FeedMedia, Resolved, Resolver, ResolverChain, SiteUrl};
 use crate::{service_id, urls};
-
-/// A feed advertised by a web page (`<link rel="alternate" type="application/rss+xml">`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DiscoveredFeed {
-    /// Feed URL, usable as a [`ChannelRef`] id.
-    pub url: Url,
-    /// The title the page gives it.
-    pub title: Option<String>,
-}
 
 /// Builds an [`RssConnector`] with a custom HTTP configuration or extra site resolvers.
 #[derive(Debug, Default)]
@@ -108,42 +99,6 @@ impl RssConnector {
         &self.http
     }
 
-    /// The feeds a web page advertises, for an "add a feed" dialog. A URL that is already a
-    /// feed is returned as is.
-    pub async fn discover_feeds(&self, url: &Url) -> Result<Vec<DiscoveredFeed>> {
-        let doc = self.http.document(url, DocumentKind::Page).await?;
-        if feed::parse(&doc.url, url.as_str(), doc.body.as_bytes()).is_ok() {
-            return Ok(vec![DiscoveredFeed {
-                url: url.clone(),
-                title: None,
-            }]);
-        }
-        let html = scraper::Html::parse_document(&doc.body);
-        let selector = media::selector(r#"link[rel~="alternate" i][href][type]"#);
-        let mut found: Vec<DiscoveredFeed> = Vec::new();
-        for link in html.select(&selector) {
-            let kind = media::essence(link.value().attr("type").unwrap_or(""));
-            if !matches!(
-                kind.as_str(),
-                "application/rss+xml" | "application/atom+xml" | "application/feed+json"
-            ) {
-                continue;
-            }
-            let Some(href) = link.value().attr("href") else {
-                continue;
-            };
-            if let Some(url) = media::resolve_url(Some(&doc.url), href)
-                && !found.iter().any(|f| f.url == url)
-            {
-                found.push(DiscoveredFeed {
-                    url,
-                    title: link.value().attr("title").map(str::to_owned),
-                });
-            }
-        }
-        Ok(found)
-    }
-
     /// Fetches and parses a feed, applying the site fix-ups to its items.
     async fn load_feed(&self, channel: &ChannelRef) -> Result<ParsedFeed> {
         let url = feed_url(channel)?;
@@ -188,6 +143,7 @@ impl Connector for RssConnector {
             signed_in: false,
             channels: Support::Anonymous,
             related: Support::Anonymous,
+            subscription_feed: Support::Local,
             subscriptions_read: Support::Local,
             subscriptions_write: Support::Local,
             history_read: Support::Local,
@@ -206,10 +162,10 @@ impl Connector for RssConnector {
         Err(Error::Unsupported)
     }
 
-    fn sign_out(&self) {}
+    async fn sign_out(&self) {}
 
-    fn parse_url(&self, url: &Url) -> Option<Target> {
-        let url = urls::normalize(url)?;
+    fn parse_url(&self, url: &str) -> Option<Target> {
+        let url = urls::normalize(&Url::parse(url.trim()).ok()?)?;
         for site in self.resolvers.sites() {
             match site.site_url(&url) {
                 Some(SiteUrl::Feed(feed)) => {
@@ -224,6 +180,43 @@ impl Connector for RssConnector {
             }
         }
         urls::looks_like_feed(&url).then(|| Target::Channel(Self::channel_ref(&url)))
+    }
+
+    /// The feeds behind a URL, for an "add a feed" dialog: the URL itself when it is a feed,
+    /// else the feeds the page advertises (`<link rel="alternate" type="application/rss+xml">`
+    /// and the Atom and JSON Feed equivalents), in page order.
+    async fn discover(&self, url: &str) -> Result<Vec<Target>> {
+        let url = Url::parse(url.trim())
+            .ok()
+            .and_then(|u| urls::normalize(&u))
+            .ok_or(Error::NotFound)?;
+        let doc = self.http.document(&url, DocumentKind::Page).await?;
+        if feed::parse(&doc.url, url.as_str(), doc.body.as_bytes()).is_ok() {
+            return Ok(vec![Target::Channel(Self::channel_ref(&url))]);
+        }
+        let html = scraper::Html::parse_document(&doc.body);
+        let selector = media::selector(r#"link[rel~="alternate" i][href][type]"#);
+        let mut found: Vec<Target> = Vec::new();
+        for link in html.select(&selector) {
+            let kind = media::essence(link.value().attr("type").unwrap_or(""));
+            if !matches!(
+                kind.as_str(),
+                "application/rss+xml" | "application/atom+xml" | "application/feed+json"
+            ) {
+                continue;
+            }
+            let target = link
+                .value()
+                .attr("href")
+                .and_then(|href| media::resolve_url(Some(&doc.url), href))
+                .map(|feed| Target::Channel(Self::channel_ref(&feed)));
+            if let Some(target) = target
+                && !found.contains(&target)
+            {
+                found.push(target);
+            }
+        }
+        Ok(found)
     }
 
     fn player(&self) -> &dyn Player {
@@ -302,9 +295,19 @@ impl Player for RssConnector {
             .resolvers
             .run(&self.http, page.as_ref(), &media)
             .await?;
-        if resolved.is_empty() {
-            return Err(resolver::nothing_playable());
-        }
+        // A page that only embeds another service's player hands the item off to it; when the
+        // page also has its own file (older Koreus pages), the file wins.
+        let handoff = if resolved.is_empty() {
+            Some(
+                resolved
+                    .resolution
+                    .handoff
+                    .clone()
+                    .ok_or_else(resolver::nothing_playable)?,
+            )
+        } else {
+            None
+        };
         let mut details = match entry {
             Some(entry) => entry.item,
             None => item_from_page(item.clone(), page.clone(), feed.as_ref()),
@@ -319,6 +322,8 @@ impl Player for RssConnector {
             expires_at: None,
             start_at: None,
             tracking: None,
+            headers: Vec::new(),
+            handoff,
         })
     }
 
@@ -352,6 +357,7 @@ fn item_from_page(r#ref: ItemRef, page: Option<Url>, feed: Option<&ParsedFeed>) 
         scheduled_start: None,
         channel: feed.map(|f| f.channel.summary.clone()),
         thumbnails: Vec::new(),
+        dimensions: None,
         views: None,
         reactions: ReactionCounts::default(),
         flags: ContentFlags::default(),
@@ -373,6 +379,14 @@ fn enrich(item: &mut Item, resolved: &Resolved) {
         item.title.clone_from(title);
     }
     item.duration = item.duration.or(found.duration);
+    item.dimensions = item.dimensions.or_else(|| {
+        resolved.streams.iter().find_map(|s| {
+            Some(Dimensions {
+                width: s.width?,
+                height: s.height?,
+            })
+        })
+    });
     item.published = item.published.or(found.published);
     if let Some(description) = &found.description
         && item
