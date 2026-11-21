@@ -1,0 +1,39 @@
+[package]
+name = "flaneur-connector-rss"
+description = "Flâneur connector for RSS and Atom video feeds, with page resolvers."
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/flaneur-app/connector-rss"
+rust-version = "1.100"
+publish = false
+
+[dependencies]
+flaneur-model = { git = "https://github.com/flaneur-app/core", branch = "feat/core-structure" }
+flaneur-connector = { git = "https://github.com/flaneur-app/core", branch = "feat/core-structure" }
+
+async-trait = "0.1.92"
+ego-tree = "0.11"
+feed-rs = "3.0.0"
+futures-util = { version = "0.3.34", default-features = false, features = ["alloc"] }
+jiff = { version = "1.0.1", default-features = false, features = ["std"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "http2", "charset", "gzip"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7.1"
+scraper = "0.29.0"
+serde_json = "1.0"
+tracing = "0.1.44"
+url = "2.5.9"
+
+[dev-dependencies]
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
+wiremock = "0.6.5"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
