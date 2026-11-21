@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Trimmed copy of https://feeds.feedburner.com/Koreus-videos (2026-11-21): first 3 of 10 items. -->
+
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+
+<channel>
+
+  <title>Koreus.com - Les dernières vidéos</title>
+
+  <link>https://www.koreus.com</link>
+
+  <description>Vidéos insolites</description>
+
+  <language>fr</language>
+
+  <copyright>Uknown</copyright>
+
+  <image>
+
+    <title>Koreus.com</title>
+
+    <url>https://koreus.b-cdn.net/static/images/logorss.jpg</url>
+
+    <link>https://www.koreus.com</link>
+
+    <width>144</width>
+
+    <height>36</height>
+
+  </image>
+
+<item>
+
+  <title>Illusion sur un tandem</title>
+
+  <link>https://www.koreus.com/video/illusion-tandem.html</link>
+
+  <guid>https://www.koreus.com/video/illusion-tandem.html</guid>
+
+  <description><![CDATA[Lors d'une course cycliste, un participant filme u... La suite sur Koreus.com<br><a href="https://www.koreus.com/video/illusion-tandem.html"><img width="640" height="360" src="https://koreus.b-cdn.net/thumbshigh/202611/illusion-tandem.jpg"></a><p>Ce media <a href="https://www.koreus.com/video/illusion-tandem.html">Illusion sur un tandem</a> est apparu en premier sur <a href="https://www.koreus.com">Koreus.com</a>.</p>]]></description>
+
+  <pubDate>Fri, 20 Nov 2026 11:48:41 +0100</pubDate>
+
+    <media:content url="https://embed.koreus.com/00071/202611/illusion-tandem.mp4" type="video/mp4" width="720" height="1280" />
+
+    <media:keywords>cyclisme, cycliste, handicap, illusion, tandem, unijambiste, velo, koreus</media:keywords>
+
+    <media:thumbnail url="https://koreus.b-cdn.net/thumbs/202611/illusion-tandemjpg" />
+
+</item>
+<item>
+
+  <title>Un chat donne une leçon de bonnes manières à son compagnon</title>
+
+  <link>https://www.koreus.com/video/chat-mordre-main.html</link>
+
+  <guid>https://www.koreus.com/video/chat-mordre-main.html</guid>
+
+  <description><![CDATA[Deux chats sont installés sur un lit avec leur ma... La suite sur Koreus.com<br><a href="https://www.koreus.com/video/chat-mordre-main.html"><img width="640" height="360" src="https://koreus.b-cdn.net/thumbshigh/202611/chat-mordre-main.jpg"></a><p>Ce media <a href="https://www.koreus.com/video/chat-mordre-main.html">Un chat donne une leçon de bonnes manières à son compagnon</a> est apparu en premier sur <a href="https://www.koreus.com">Koreus.com</a>.</p>]]></description>
+
+  <pubDate>Fri, 20 Nov 2026 09:52:34 +0100</pubDate>
+
+    <media:content url="https://embed.koreus.com/00071/202611/chat-mordre-main.mp4" type="video/mp4" width="1080" height="1920" />
+
+    <media:keywords>caresse, chat, correction, mordre, morsure, patte, koreus</media:keywords>
+
+    <media:thumbnail url="https://koreus.b-cdn.net/thumbs/202611/chat-mordre-mainjpg" />
+
+</item>
+<item>
+
+  <title>Un chantier avec vue sur un cours de zumba</title>
+
+  <link>https://www.koreus.com/video/chantier-zumba.html</link>
+
+  <guid>https://www.koreus.com/video/chantier-zumba.html</guid>
+
+  <description><![CDATA[À Kirov, en Russie, des ouvriers ont une vue impr... La suite sur Koreus.com<br><a href="https://www.koreus.com/video/chantier-zumba.html"><img width="640" height="360" src="https://koreus.b-cdn.net/thumbshigh/202611/chantier-zumba.jpg"></a><p>Ce media <a href="https://www.koreus.com/video/chantier-zumba.html">Un chantier avec vue sur un cours de zumba</a> est apparu en premier sur <a href="https://www.koreus.com">Koreus.com</a>.</p>]]></description>
+
+  <pubDate>Fri, 20 Nov 2026 09:30:25 +0100</pubDate>
+
+    <media:content url="https://embed.koreus.com/00071/202611/chantier-zumba.mp4" type="video/mp4" width="1080" height="1920" />
+
+    <media:keywords>chantier, construction, cours, danse, femme, homme, immeuble, ouvrier, zumba, koreus</media:keywords>
+
+    <media:thumbnail url="https://koreus.b-cdn.net/thumbs/202611/chantier-zumbajpg" />
+
+</item>
+</channel>
+</rss>

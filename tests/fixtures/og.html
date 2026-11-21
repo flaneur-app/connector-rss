@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Synthetic page with Open Graph tags, a rating and an HTML5 player. -->
+<html><head>
+<meta property="og:title" content="Open Graph clip">
+<meta property="og:description" content="Described by Open Graph.">
+<meta property="og:image" content="{{BASE}}/thumbs/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:video" content="{{BASE}}/embed/og">
+<meta property="og:video:type" content="text/html">
+<meta property="og:video" content="http://insecure.invalid/og.mp4">
+<meta property="og:video:secure_url" content="{{BASE}}/media/og.mp4">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:width" content="1280">
+<meta property="og:video:height" content="720">
+<meta property="video:duration" content="61">
+<meta name="rating" content="general">
+</head><body>
+<video poster="/thumbs/poster.jpg" controls>
+  <source src="/media/og.webm" type='video/webm; codecs="vp9, opus"' label="WebM">
+  <source src="/media/og.mp4" type="video/mp4">
+  <source src="/media/missing.mp4" type="video/mp4">
+  <source src="/media/hls/master.m3u8" type="application/x-mpegURL">
+</video>
+</body></html>

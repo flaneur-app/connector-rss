@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Synthetic RSS 2.0 feed. {{BASE}} is replaced by the mock server's URL in tests. -->
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Example &amp; Videos</title>
+  <link>{{BASE}}/</link>
+  <atom:link href="{{BASE}}/rss.xml" rel="self" type="application/rss+xml"/>
+  <description><![CDATA[Short films, <b>weekly</b>.]]></description>
+  <image>
+    <url>{{BASE}}/logo.png</url>
+    <title>Example</title>
+    <link>{{BASE}}/</link>
+    <width>144</width>
+    <height>36</height>
+  </image>
+  <item>
+    <title>Older clip with an enclosure</title>
+    <link>{{BASE}}/videos/older.html</link>
+    <guid isPermaLink="false">example-older</guid>
+    <description><![CDATA[<p>An older clip.</p><img src="/thumbs/older.jpg" width="320" height="180">]]></description>
+    <pubDate>Mon, 16 Nov 2026 08:00:00 +0000</pubDate>
+    <enclosure url="{{BASE}}/media/older.mp4" length="1000" type="video/mp4"/>
+  </item>
+  <item>
+    <title>Newest clip, page only</title>
+    <link>{{BASE}}/videos/jsonld.html</link>
+    <description>Found through JSON-LD.</description>
+    <pubDate>Wed, 18 Nov 2026 08:00:00 +0000</pubDate>
+  </item>
+  <item>
+    <title>Middle clip, Media RSS</title>
+    <link>{{BASE}}/videos/og.html</link>
+    <guid>{{BASE}}/videos/og.html</guid>
+    <pubDate>Tue, 17 Nov 2026 08:00:00 +0000</pubDate>
+    <media:content url="{{BASE}}/media/broken.mp4" type="video/mp4" width="1280" height="720" duration="61">
+      <media:rating scheme="urn:simple">adult</media:rating>
+    </media:content>
+    <media:thumbnail url="{{BASE}}/thumbs/middle.jpg" width="640" height="360"/>
+  </item>
+  <item>
+    <title>An audio episode</title>
+    <link>{{BASE}}/podcast/1.html</link>
+    <pubDate>Thu, 19 Nov 2026 08:00:00 +0000</pubDate>
+    <enclosure url="{{BASE}}/media/episode.mp3" length="1000" type="audio/mpeg"/>
+  </item>
+</channel>
+</rss>

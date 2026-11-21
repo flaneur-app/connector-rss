@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Synthetic page with a JSON-LD VideoObject inside @graph. -->
+<html><head>
+<title>JSON-LD clip | Example</title>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@graph": [
+  {"@type": "WebPage", "name": "JSON-LD clip"},
+  {"@type": "VideoObject",
+   "name": "JSON-LD clip",
+   "description": "<p>A clip described in <em>JSON-LD</em>, with a longer description than the feed.</p>",
+   "contentUrl": "/media/jsonld.mp4",
+   "encodingFormat": "video/mp4",
+   "embedUrl": "{{BASE}}/embed/jsonld",
+   "duration": "PT1M5S",
+   "uploadDate": "2026-11-18",
+   "width": 1920, "height": "1080",
+   "thumbnail": {"@type": "ImageObject", "url": "/thumbs/jsonld.jpg", "width": 1280, "height": 720},
+   "isFamilyFriendly": "false"}
+]}
+</script>
+<script type="application/ld+json">{ not json </script>
+</head><body><h1>JSON-LD clip</h1></body></html>
