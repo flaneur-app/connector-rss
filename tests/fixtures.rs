@@ -190,6 +190,30 @@ async fn koreus_resolver_ranks_hd_first() {
 }
 
 #[tokio::test]
+async fn koreus_page_with_a_dailymotion_copy() {
+    // The real page: its own MP4 variants in `playerkoreus()`, and a Dailymotion player built by
+    // `playerori()`. The variants are the candidates; the embed is only kept as a handoff.
+    let page = page(
+        "koreus-page-dailymotion.html",
+        "https://www.koreus.com/video/chat-mordre-main.html",
+    );
+    let own = run(&Koreus, &page).await;
+    assert_eq!(own.candidates.len(), 2);
+    assert!(
+        own.candidates
+            .iter()
+            .all(|c| c.url.host_str() == Some("embed.koreus.com"))
+    );
+    let embedded = run(&EmbeddedPlayer, &page).await;
+    assert_eq!(embedded.handoff.unwrap().to_string(), "dailymotion:xby943q");
+    // One embedded video, found once.
+    assert_eq!(
+        flaneur_connector_rss::resolver::embed::all(&page.source).len(),
+        1
+    );
+}
+
+#[tokio::test]
 async fn generic_resolvers_read_koreus_page() {
     let page = page(
         "koreus-page.html",

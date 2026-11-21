@@ -355,6 +355,7 @@ dependencies = [
  "flaneur-model",
  "futures-util",
  "jiff",
+ "percent-encoding",
  "reqwest",
  "rustls",
  "rustls-platform-verifier",

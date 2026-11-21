@@ -14,7 +14,7 @@ The crate `flaneur-connector-rss` implements the `Connector` trait of
 | Operation | Support | How |
 | --- | --- | --- |
 | Channel pages | Anonymous | A feed is a channel: its id is the feed URL. The header comes from the feed (title, description, logo, site link); the `Videos` tab lists the feed's video items, newest first, in one page. |
-| Playback | Anonymous | `resolve` re-reads the feed, runs the resolver chain on the item's enclosures and page, and returns the verified streams (`StreamKind::Muxed`, with the site's variant name as `label`), HLS and DASH manifests. A page that only embeds a YouTube player is handed off (`Playable.handoff`) to the YouTube connector. |
+| Playback | Anonymous | `resolve` re-reads the feed, runs the resolver chain on the item's enclosures and page, and returns the verified streams (`StreamKind::Muxed`, with the site's variant name as `label`), HLS and DASH manifests. A page that only embeds a player of a known video host (YouTube, Dailymotion, Odysee) is handed off (`Playable.handoff`) to that service's connector. |
 | Related items | Anonymous | The other items of the same feed: older ones first, then newer ones. |
 | Following feeds | Local | Kept by the core's store. |
 | Subscription feed | Local | The core's merge, by date, of the `items()` of every followed feed. |
@@ -77,8 +77,8 @@ upload date, thumbnails, sensitivity). The chain runs:
    4. `meta-tags`: `og:video` (an `og:video:type` that is not video, such as `text/html`, rules
       the URL out), `twitter:player:stream`, `og:image`, `video:duration`, `<meta name="rating">`;
    5. `html5-video`: `<video src>`, `<video>` / `<video-js>` `<source>` elements;
-   6. `embedded-player`: a YouTube embed (`youtube.com/embed/<id>`, also inside scripts), kept as
-      a handoff;
+   6. `embedded-player`: an embedded player or video link of a known host, also inside scripts,
+      kept as a handoff (see below);
    7. `oembed`: the page's JSON oEmbed document, only when nothing before found a candidate.
 
 The page is fetched once, and not at all when the link points at a media file. Results merge
@@ -92,11 +92,25 @@ a video, HLS or DASH content type (`application/octet-stream` only for URLs with
 extension). The probe also gives the file size (`Content-Range`), and the bitrate follows from
 size and duration.
 
-When no candidate plays but the page embeds a YouTube player, `resolve` returns a `Playable`
-with no streams and `handoff: Some(youtube:<id>)`; the view-model resolves that item with the
-YouTube connector. When the page has its own file as well (older Koreus pages also embed the
-YouTube copy), the file wins. Other services (Odysee, PeerTube, Dailymotion) are not detected:
-their ids cannot be read from an embed URL without a request.
+### Handoff to video hosts
+
+When no candidate plays but the page embeds a video of a known host, `resolve` returns a
+`Playable` with no streams and `handoff` set to that video's `ItemRef`; the view-model resolves
+it with that service's connector. **A self-hosted file always wins**: when the page has one, the
+embed is ignored (Koreus pages build a YouTube or Dailymotion copy in a script, next to their
+own MP4). The page source is scanned as text, so players written by scripts count too.
+
+| Host | Recognized | `ItemRef` |
+| --- | --- | --- |
+| YouTube | `youtube.com/embed/<id>`, `youtube-nocookie.com/embed/<id>` | `youtube:<11-character id>` |
+| Dailymotion | `dailymotion.com/embed/video/<id>`, `geo.dailymotion.com/player/<player>.html?video=<id>`, `dai.ly/<id>`, `dailymotion.com/video/<id>` | `dailymotion:<id>` |
+| Odysee | `odysee.com/$/embed/...` | `odysee:<claim id>`, or `odysee:@channel#m/name#m`, as connector-odysee's `parse_url` reads the same link |
+
+The first one in the page is used. PeerTube embeds (`/videos/embed/<uuid>`) are not recognized:
+they live on any host and no connector defines their ids yet. Adding a host is one entry in the
+table of `src/resolver/embed.rs` (a text marker and a function from the URL to an `ItemRef`).
+`Playable` has room for one handoff only, so the alternatives found next to a self-hosted file
+are not exposed.
 
 ### Koreus
 
