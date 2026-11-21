@@ -9,8 +9,8 @@ rust-version = "1.100"
 publish = false
 
 [dependencies]
-flaneur-model = { git = "https://github.com/flaneur-app/core", branch = "feat/core-structure" }
-flaneur-connector = { git = "https://github.com/flaneur-app/core", branch = "feat/core-structure" }
+flaneur-model = { git = "https://github.com/flaneur-app/core" }
+flaneur-connector = { git = "https://github.com/flaneur-app/core" }
 
 async-trait = "0.1.92"
 ego-tree = "0.11"
